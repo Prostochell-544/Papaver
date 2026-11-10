@@ -1,65 +1,67 @@
 # Papaver
 
-**Papaver** — асинхронный CLI-аудитор научной целостности публикаций. По DOI статьи
-он собирает из открытых библиографических баз всё, что нужно для быстрой проверки
-due diligence: отозвана ли работа, были ли к ней исправления или «выражения
-обеспокоенности» (expression of concern), где и кем она опубликована, и в каком
-контексте её цитируют другие исследователи.
+**English** | [Русский](README.ru.md) | [Українська](README.uk.md)
 
-Типичный сценарий: перед тем как сослаться на статью или опереться на её выводы,
-выполнить `papaver check <DOI>` и за несколько секунд увидеть, например, что
-работа Уэйкфилда 1998 года о «связи» вакцины MMR с аутизмом отозвана журналом
-The Lancet в 2010 году, а свежие цитирующие статьи упоминают её как пример
-научного мошенничества.
+**Papaver** is an asynchronous command-line auditor for the integrity of scientific
+publications. Give it a paper's DOI and it collects, from open bibliographic
+databases, what you need for a quick due-diligence check: whether the paper has been
+retracted, whether it carries corrections or expressions of concern, where and by
+whom it was published, and how other researchers cite it.
 
-## Возможности
+A typical use: before you cite a paper or build on its findings, run
+`papaver check <DOI>`. Within a few seconds you can see, for example, that
+Wakefield's 1998 paper on the alleged link between the MMR vaccine and autism was
+retracted by The Lancet in 2010, and that recent papers citing it use it as an
+example of research fraud.
 
-Текущая версия (этап 2):
+## Features
 
-- **Метаданные из двух источников параллельно.** Crossref (регистратор DOI) и
-  OpenAlex опрашиваются одновременно, их данные объединяются в одну строго
-  типизированную модель `PaperMetadata`: название, год, журнал, ISSN, издатель,
-  авторы с ORCID / OpenAlex ID и аффилиациями, статус открытого доступа,
-  число цитирований.
-- **Ретракции и редакционные уведомления.** Отзыв, исправление, expression of concern,
-  withdrawal и т.д. берутся из поля Crossref `updated-by` (включая записи Retraction
-  Watch, `source: retraction-watch`) и из флага OpenAlex `is_retracted`. Для каждого
-  уведомления сохраняются тип, дата, DOI уведомления и источник.
-- **Контексты цитирования из Semantic Scholar.** Предложения, в которых другие
-  статьи ссылаются на проверяемую, вместе с намерением цитирования (`background`,
-  `methodology`, `result`) и признаком «влиятельной» ссылки (`isInfluential`).
-  Мусорные и пустые контексты отфильтровываются.
-- **Локальный кэш** ответов API в SQLite (SQLAlchemy 2.0 async + aiosqlite) с TTL:
-  повторная проверка той же статьи не отправляет запросов в сеть.
-- **Устойчивость к сбоям.** Таймауты, повторы с экспоненциальной задержкой, учёт
-  заголовка `Retry-After` при HTTP 429, ограничение частоты запросов к Semantic
-  Scholar. Если один из источников недоступен, отчёт строится по остальным, а в
-  нём появляется предупреждение о неполноте данных.
-- **Два формата вывода:** читаемая сводка в терминале и полный отчёт в JSON
-  (`--json`) для дальнейшей обработки.
+Current version (stage 2):
 
-В планах (см. [дорожную карту](#дорожная-карта)): обсуждения PubPeer, итоговый
-вердикт-«светофор» (`BLACK_CODE` / `RED` / `YELLOW` / `GREEN`), репутация журнала
-и авторов, команда `papaver verify "<утверждение>"`, поиск по PMID и URL.
+- **Metadata from two sources in parallel.** Crossref (the DOI registration agency)
+  and OpenAlex are queried concurrently and merged into one strictly typed
+  `PaperMetadata` model: title, year, journal, ISSN, publisher, authors with ORCID /
+  OpenAlex IDs and affiliations, open-access status, citation count.
+- **Retractions and editorial notices.** Retractions, corrections, expressions of
+  concern, withdrawals and other notices come from Crossref's `updated-by` field
+  (including Retraction Watch records, `source: retraction-watch`) and from the
+  OpenAlex `is_retracted` flag. Each notice keeps its type, date, notice DOI and
+  source.
+- **Citation contexts from Semantic Scholar.** The sentences in which other papers
+  cite the one being checked, together with the citation intent (`background`,
+  `methodology`, `result`) and whether the citation is influential
+  (`isInfluential`). Empty and junk contexts are filtered out.
+- **Local cache** of API responses in SQLite (SQLAlchemy 2.0 async + aiosqlite) with
+  a TTL: checking the same paper again sends no network requests.
+- **Fault tolerance.** Timeouts, retries with exponential backoff, `Retry-After`
+  handling on HTTP 429, and rate limiting for Semantic Scholar. If one source is
+  down, the report is built from the others and carries a warning that the data is
+  incomplete.
+- **Two output formats:** a readable summary in the terminal, and the full report as
+  JSON (`--json`) for further processing.
 
-## Требования
+Planned (see the [roadmap](#roadmap)): PubPeer discussions, a traffic-light verdict
+(`BLACK_CODE` / `RED` / `YELLOW` / `GREEN`), journal and author reputation, a
+`papaver verify "<claim>"` command, lookup by PMID and URL.
+
+## Requirements
 
 - Python **3.11+**
-- Доступ в интернет (api.crossref.org, api.openalex.org, api.semanticscholar.org)
+- Internet access (api.crossref.org, api.openalex.org, api.semanticscholar.org)
 
-## Установка
+## Installation
 
-### 1. Получите код
+### 1. Get the code
 
 ```bash
 git clone https://github.com/Prostochell-544/Papaver.git
 cd Papaver
 ```
 
-Без git: скачайте архив репозитория (**Code → Download ZIP** на GitHub) и
-распакуйте его.
+Without git: download the repository archive (**Code → Download ZIP** on GitHub) and
+unpack it.
 
-### 2. Создайте и активируйте виртуальное окружение
+### 2. Create and activate a virtual environment
 
 Windows (PowerShell):
 
@@ -68,9 +70,8 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-Если PowerShell запрещает запуск скриптов, используйте `cmd` и
-`.venv\Scripts\activate.bat` или вызывайте интерпретатор напрямую:
-`.venv\Scripts\python.exe`.
+If PowerShell refuses to run scripts, use `cmd` with `.venv\Scripts\activate.bat`,
+or call the interpreter directly: `.venv\Scripts\python.exe`.
 
 Linux / macOS:
 
@@ -79,22 +80,23 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-**PyCharm:** *Settings → Project → Python Interpreter → Add Interpreter → Existing* и
-укажите `.venv\Scripts\python.exe` (или `.venv/bin/python`).
+**PyCharm:** *Settings → Project → Python Interpreter → Add Interpreter → Existing*,
+then select `.venv\Scripts\python.exe` (or `.venv/bin/python`).
 
-### 3. Установите зависимости и сам пакет
+### 3. Install the dependencies and the package
 
 ```bash
 pip install -r requirements.txt
 pip install -e .
 ```
 
-`pip install -e .` ставит пакет в режиме разработки: правки в `src/` подхватываются
-без переустановки, а в окружении появляется команда `papaver`.
+`pip install -e .` installs the package in development mode: edits under `src/` take
+effect without reinstalling, and the `papaver` command becomes available in the
+environment.
 
-### 4. Настройте `.env`
+### 4. Configure `.env`
 
-Скопируйте шаблон:
+Copy the template:
 
 ```powershell
 Copy-Item .env.example .env        # Windows PowerShell
@@ -104,32 +106,32 @@ Copy-Item .env.example .env        # Windows PowerShell
 cp .env.example .env               # Linux / macOS
 ```
 
-и заполните значения. `.env` читается из **текущей рабочей директории**; переменные
-окружения имеют приоритет над файлом. Файл `.env` исключён из git.
+and fill in the values. `.env` is read from the **current working directory**, and
+real environment variables take precedence over it. `.env` is excluded from git.
 
-| Переменная | По умолчанию | Назначение |
+| Variable | Default | Purpose |
 |---|---|---|
-| `PAPAVER_CONTACT_EMAIL` | — | Ваш email. Подставляется в заголовок `User-Agent: Papaver/0.1.0 (mailto:...)`. Crossref и OpenAlex направляют такие запросы в **Polite Pool**: он быстрее и стабильнее анонимного. Настоятельно рекомендуется. |
-| `PAPAVER_S2_API_KEY` | — | Ключ [Semantic Scholar API](https://www.semanticscholar.org/product/api) (бесплатно, по заявке). Без ключа запросы идут в общий пул, который часто отвечает HTTP 429; Papaver повторяет запросы, но с ключом заметно надёжнее. |
-| `PAPAVER_DB_URL` | `sqlite+aiosqlite:///./papaver_cache.db` | База для кэша ответов. Относительный путь считается от рабочей директории. |
-| `PAPAVER_CACHE_TTL_HOURS` | `24` | Сколько часов кэшированный ответ считается свежим. `0` — не читать из кэша. |
-| `PAPAVER_S2_MAX_CITATIONS` | `1000` | Сколько цитирующих статей просматривать (максимум 9999: ограничение API). |
-| `PAPAVER_HTTP_TIMEOUT` | `15` | Таймаут одного запроса, секунд. |
-| `PAPAVER_MAX_RETRIES` | `2` | Повторы для Crossref / OpenAlex. |
-| `PAPAVER_S2_MAX_RETRIES` | `4` | Повторы для Semantic Scholar. |
-| `PAPAVER_S2_MIN_INTERVAL` | `1.0` | Минимальный интервал между запросами к Semantic Scholar, секунд. |
+| `PAPAVER_CONTACT_EMAIL` | — | Your email. It goes into the header `User-Agent: Papaver/0.1.0 (mailto:...)`. Crossref and OpenAlex route such requests to their **polite pool**, which is faster and more reliable than the anonymous one. Strongly recommended. |
+| `PAPAVER_S2_API_KEY` | — | A [Semantic Scholar API](https://www.semanticscholar.org/product/api) key (free, on request). Without a key, requests go to a shared pool that often answers HTTP 429. Papaver retries, but a key makes it much more reliable. |
+| `PAPAVER_DB_URL` | `sqlite+aiosqlite:///./papaver_cache.db` | Database for the response cache. A relative path is resolved against the working directory. |
+| `PAPAVER_CACHE_TTL_HOURS` | `24` | How many hours a cached response stays fresh. `0` means never read from the cache. |
+| `PAPAVER_S2_MAX_CITATIONS` | `1000` | How many citing papers to scan (at most 9999, an API limit). |
+| `PAPAVER_HTTP_TIMEOUT` | `15` | Timeout for a single request, in seconds. |
+| `PAPAVER_MAX_RETRIES` | `2` | Retries for Crossref / OpenAlex. |
+| `PAPAVER_S2_MAX_RETRIES` | `4` | Retries for Semantic Scholar. |
+| `PAPAVER_S2_MIN_INTERVAL` | `1.0` | Minimum interval between Semantic Scholar requests, in seconds. |
 
-## Использование
+## Usage
 
 ```bash
 papaver check "10.1016/S0140-6736(97)11096-0"
 ```
 
-> **Берите DOI в кавычки.** Многие DOI содержат скобки, а их интерпретируют и
-> PowerShell, и bash.
+> **Quote the DOI.** Many DOIs contain parentheses, which both PowerShell and bash
+> try to interpret.
 
-Принимаются любые распространённые формы записи DOI; все они приводятся к
-каноническому виду `10.xxxx/...` в нижнем регистре:
+All common ways of writing a DOI are accepted. Each is reduced to the canonical
+lower-case form `10.xxxx/...`:
 
 ```text
 10.1016/S0140-6736(97)11096-0
@@ -139,23 +141,23 @@ https://doi.org/10.1016%2FS0140-6736%2897%2911096-0
 https://onlinelibrary.wiley.com/doi/full/10.1002/anie.201915678
 ```
 
-### Параметры `papaver check`
+### `papaver check` options
 
-| Параметр | Описание |
+| Option | Description |
 |---|---|
-| `--max-citations N` | Сколько цитирующих статей просмотреть в Semantic Scholar (0–9999, по умолчанию `PAPAVER_S2_MAX_CITATIONS`). `0` — не запрашивать цитирования. |
-| `--contexts N` | Сколько контекстов цитирования вывести в сводке (по умолчанию 10). Сначала влиятельные, затем самые свежие. |
-| `--json` | Вывести полный отчёт `AuditReport` в JSON вместо сводки. |
-| `--no-cache` | Не читать и не обновлять локальный кэш. |
+| `--max-citations N` | How many citing papers to scan in Semantic Scholar (0–9999, defaults to `PAPAVER_S2_MAX_CITATIONS`). `0` skips citations entirely. |
+| `--contexts N` | How many citation contexts to show in the summary (default 10). Influential citations come first, then the most recent. |
+| `--json` | Print the full `AuditReport` as JSON instead of the summary. |
+| `--no-cache` | Neither read nor update the local cache. |
 
-Глобальные параметры указываются **перед** командой:
+Global options go **before** the command:
 
 ```bash
 papaver --version
-papaver -v check "10.1016/S0140-6736(97)11096-0"   # логи HTTP-запросов, повторов и попаданий в кэш
+papaver -v check "10.1016/S0140-6736(97)11096-0"   # log HTTP requests, retries and cache hits
 ```
 
-### Пример: статья Уэйкфилда (1998)
+### Example: the Wakefield paper (1998)
 
 ```text
 $ papaver check "10.1016/S0140-6736(97)11096-0" --contexts 3
@@ -198,7 +200,7 @@ and pervasive developmental disorder in children',
             openalex_id='A5110236514',
             affiliations=['The Royal Free Hospital']
         ),
-        ...                       # ещё 12 авторов
+        ...                       # 12 more authors
     ],
     cited_by_count=3106,
     sources=[
@@ -229,161 +231,166 @@ disease and developmental regression or autism [34]."
 ...
 ```
 
-Как это читать: `is_retracted=True`, а в `update_notices` есть уведомление
-`RETRACTION` от 6 февраля 2010 года с DOI самого уведомления о ретракции. Блок
-Semantic Scholar показывает, как статью цитируют сегодня.
+How to read it: `is_retracted=True`, and `update_notices` contains a `RETRACTION`
+notice dated 6 February 2010 along with the DOI of the retraction notice itself. The
+Semantic Scholar section shows how the paper is cited today.
 
-### JSON-отчёт
+### JSON report
 
 ```bash
 papaver check "10.1016/S0140-6736(97)11096-0" --json > report.json
 ```
 
-Структура верхнего уровня: `target`, `paper` (`PaperMetadata`), `citations`
-(`items`, `scanned`, `truncated`), `warnings`, `verdict` и `reasons` (пока `null` и
-пусто: заполнятся движком вердиктов), `generated_at`.
+Top-level fields: `target`, `paper` (`PaperMetadata`), `citations` (`items`,
+`scanned`, `truncated`), `warnings`, `verdict` and `reasons` (`null` and empty for
+now; the verdict engine will fill them in), `generated_at`.
 
-### Коды возврата
+### Exit codes
 
-| Код | Значение |
+| Code | Meaning |
 |---|---|
-| `0` | Отчёт построен (возможно, с предупреждениями о неполных данных). |
-| `1` | DOI не найден ни в Crossref, ни в OpenAlex, либо источники недоступны. |
-| `2` | Некорректный DOI или ошибка в настройках `PAPAVER_*`. |
+| `0` | The report was built (possibly with warnings about incomplete data). |
+| `1` | Neither Crossref nor OpenAlex knows the DOI, or the sources are unreachable. |
+| `2` | Invalid DOI, or invalid `PAPAVER_*` settings. |
 
-### Запуск из PyCharm
+### Running from PyCharm
 
-`main.py` в корне проекта — обёртка над CLI. Создайте Run Configuration для
-`main.py`, в поле **Parameters** укажите, например,
-`check "10.1016/S0140-6736(97)11096-0"`, а **Working directory** оставьте корнем
-проекта (оттуда читаются `.env` и кэш).
+`main.py` in the project root wraps the CLI. Create a Run Configuration for
+`main.py`, put for example `check "10.1016/S0140-6736(97)11096-0"` in
+**Parameters**, and leave **Working directory** at the project root (that is where
+`.env` and the cache are read from).
 
-## Как это работает
+## How it works
 
 ```text
-                         ┌─► Crossref  /works/{doi} ───────────────┐
-DOI ─► normalize_doi() ──┼─► OpenAlex  /works/https://doi.org/{doi} ┴─► PaperMetadata ─┐
-                         └─► Semantic Scholar /paper/DOI:{doi}/citations ─► CitationScan ┴─► AuditReport
-                                   ▲  (страницы по 1000, ≤ 1 запрос/с)                    │
-                     SQLite-кэш ответов (TTL) для всех трёх источников                    ▼
-                                                                         терминал / JSON
+DOI ─► normalize_doi()
+         │
+         ├─► Crossref          /works/{doi}                  ─┐
+         ├─► OpenAlex          /works/https://doi.org/{doi}  ─┴─► PaperMetadata ─┐
+         └─► Semantic Scholar  /paper/DOI:{doi}/citations    ───► CitationScan  ─┴─► AuditReport
 ```
 
-Все три источника опрашиваются одновременно (`asyncio`). Метаданные обязательны:
-если DOI не найден ни в Crossref, ни в OpenAlex, запрос к Semantic Scholar
-отменяется и команда завершается с ошибкой. Цитирования необязательны: их
-недоступность превращается в предупреждение в отчёте.
+All three sources are queried concurrently (`asyncio`), and every request goes
+through the SQLite response cache. Semantic Scholar is read in pages of 1000 records,
+at most one request per second. The finished `AuditReport` is printed to the
+terminal or as JSON. Metadata is mandatory: if neither Crossref nor OpenAlex knows
+the DOI, the Semantic Scholar request is cancelled and the command exits with an
+error. Citations are optional: if they are unavailable, the report gets a warning
+instead.
 
-### Ретракции: `updated-by` против `update-to`
+### Retractions: `updated-by` vs `update-to`
 
-Crossref хранит связь «уведомление → статья» с двух сторон:
+Crossref records the link between a notice and the paper it concerns on both sides:
 
-- у **исправленной/отозванной статьи** есть поле `updated-by` со списком
-  уведомлений о ней. Именно здесь лежит ретракция статьи Уэйкфилда;
-- у **самого уведомления** есть поле `update-to`, указывающее на статью.
+- the **corrected or retracted paper** has an `updated-by` field listing the notices
+  about it. This is where the retraction of the Wakefield paper is recorded;
+- the **notice itself** has an `update-to` field pointing at the paper.
 
-Papaver читает оба поля: `PaperMetadata.update_notices` — уведомления о
-проверяемой статье, `PaperMetadata.amends` — заполняется, если проверяемый DOI сам
-является уведомлением. У каждого `UpdateNotice` есть `notice_doi` и `target_doi`,
-так что направление связи однозначно.
+Papaver reads both. `PaperMetadata.update_notices` holds notices about the paper
+being checked; `PaperMetadata.amends` is filled when the DOI being checked is itself
+a notice. Every `UpdateNotice` carries both `notice_doi` and `target_doi`, so the
+direction of the link is never ambiguous.
 
-OpenAlex ставит `is_retracted: true` и самой записи-уведомлению о ретракции. Чтобы
-уведомление не выглядело «отозванной статьёй», для таких записей (тип OpenAlex
-`retraction`/`erratum` или наличие `update-to`) учитываются только данные Crossref.
+OpenAlex also sets `is_retracted: true` on the retraction notice itself. To keep a
+notice from looking like a retracted paper, Papaver relies on Crossref alone for such
+records (OpenAlex type `retraction`/`erratum`, or an `update-to` field present).
 
-### Контексты цитирования
+### Citation contexts
 
-- Semantic Scholar отдаёт не более 1000 записей за запрос и требует
-  `offset + limit < 10000`, поэтому за один аудит можно просмотреть до 9999
-  цитирующих статей.
-- Значительная часть цитирующих статей приходит **без контекстов** (лицензионные
-  ограничения издателей; у статьи Уэйкфилда примерно две трети). Такие статьи
-  учитываются в счётчике `scanned`, но в `items` не попадают.
-- Отбрасываются «мусорные» контексты: короче 20 символов или менее чем с 10 буквами
-  (`[12]`, `(1–5)`, `...`), а также дубликаты внутри одной статьи (без учёта
-  регистра и пробелов).
+- Semantic Scholar returns at most 1000 records per request and requires
+  `offset + limit < 10000`, so a single audit can scan up to 9999 citing papers.
+- Many citing papers come back **without contexts** because of publisher licensing
+  (about two thirds for the Wakefield paper). They count towards `scanned` but are
+  left out of `items`.
+- Junk contexts are dropped: anything shorter than 20 characters or with fewer than
+  10 letters (`[12]`, `(1–5)`, `...`), and duplicates within one paper (ignoring case
+  and whitespace).
 
-### Кэш
+### Cache
 
-Ключ кэша — источник плюс полный URL запроса (включая параметры), значение —
-сырой JSON-ответ. Кэшируются только успешные ответы, ошибки и 404 — никогда.
-Сбой базы (например, файл заблокирован) не прерывает проверку: кэш просто
-отключается с предупреждением. Чтобы сбросить кэш, удалите файл
-`papaver_cache.db` или запустите проверку с `--no-cache`.
+The cache key is the source plus the full request URL (query parameters included);
+the value is the raw JSON response. Only successful responses are cached, never
+errors or 404s. A database failure (a locked file, say) does not stop the check: the
+cache is switched off with a warning. To clear the cache, delete `papaver_cache.db`
+or run the check with `--no-cache`.
 
-## Структура проекта
+## Project structure
 
 ```text
 Project_TrueFalse/
-├── main.py                  # точка входа для PyCharm → papaver.cli:app
-├── pyproject.toml           # метаданные пакета, entry point `papaver`, настройки pytest
+├── main.py                  # entry point for PyCharm → papaver.cli:app
+├── pyproject.toml           # package metadata, `papaver` entry point, pytest settings
+├── README.md                # this file; README.ru.md and README.uk.md are translations
 ├── requirements.txt
-├── .env.example             # шаблон настроек
+├── .env.example             # settings template
 ├── src/papaver/
-│   ├── cli.py               # Typer: команда `check`, коды возврата, UTF-8 вывод
+│   ├── cli.py               # Typer: `check` command, exit codes, UTF-8 output
 │   ├── core/
-│   │   ├── config.py        # Settings (pydantic-settings), User-Agent для Polite Pool
+│   │   ├── config.py        # Settings (pydantic-settings), polite-pool User-Agent
 │   │   ├── schemas.py       # Pydantic v2: PaperMetadata, UpdateNotice, CitationScan, AuditReport…
 │   │   └── exceptions.py    # PaperNotFoundError, UpstreamTimeoutError, UpstreamServiceError
 │   ├── services/
-│   │   ├── http.py          # базовый клиент: повторы, Retry-After, rate limit, кэш
+│   │   ├── http.py          # base client: retries, Retry-After, rate limiting, cache
 │   │   ├── ingest.py        # Crossref + OpenAlex → PaperMetadata
 │   │   ├── citations.py     # Semantic Scholar → CitationContextItem / CitationScan
-│   │   └── audit.py         # конвейер `check`: всё вместе → AuditReport
+│   │   └── audit.py         # the `check` pipeline: everything together → AuditReport
 │   ├── db/
-│   │   ├── models.py        # SQLAlchemy 2.0: таблица api_cache
+│   │   ├── models.py        # SQLAlchemy 2.0: the api_cache table
 │   │   ├── session.py       # AsyncEngine, async_sessionmaker
-│   │   └── cache.py         # ResponseCache с TTL
+│   │   └── cache.py         # ResponseCache with TTL
 │   └── utils/
-│       ├── doi.py           # нормализация DOI (без зависимостей, совместима с Alcedo)
-│       ├── payload.py       # безопасный доступ к полям «сырого» JSON
-│       └── formatters.py    # вывод отчёта в терминал (rich)
-└── tests/                   # pytest + respx, без обращений к сети
+│       ├── doi.py           # DOI normalization (dependency-free, shared with Alcedo)
+│       ├── payload.py       # safe access to fields of raw JSON payloads
+│       └── formatters.py    # terminal rendering of the report (rich)
+└── tests/                   # pytest + respx, no network access
 ```
 
-Модели в `core/schemas.py` строгие (`extra="forbid"`, нормализация и проверка DOI,
-ORCID, ISSN, OpenAlex ID), а очистка «грязных» ответов API происходит в сервисах.
-Поэтому одно некорректное поле в ответе API не роняет весь отчёт.
+The models in `core/schemas.py` are strict (`extra="forbid"`, DOI, ORCID, ISSN and
+OpenAlex ID normalized and validated), while messy API responses are cleaned up in
+the services. One malformed field in an API response therefore does not break the
+whole report.
 
-## Тесты
+## Tests
 
 ```bash
 python -m pytest
 ```
 
-- Тесты **не ходят в сеть**: HTTP-запросы перехватываются через
-  [respx](https://lundberg.github.io/respx/), а фикстуры (`tests/conftest.py`) —
-  урезанные копии реальных ответов Crossref, OpenAlex и Semantic Scholar.
-- Асинхронные тесты работают через `pytest-asyncio` в режиме `asyncio_mode = "auto"`
-  (настроено в `pyproject.toml`), декораторы не нужны.
-- Тесты не читают ваш `.env` и используют временную базу кэша.
+- The tests **never touch the network**: HTTP requests are intercepted with
+  [respx](https://lundberg.github.io/respx/), and the fixtures in
+  `tests/conftest.py` are trimmed copies of real Crossref, OpenAlex and Semantic
+  Scholar responses.
+- Async tests run on `pytest-asyncio` with `asyncio_mode = "auto"` (set in
+  `pyproject.toml`), so no decorators are needed.
+- The tests do not read your `.env` and use a temporary cache database.
 
-Полезные варианты:
+Useful variants:
 
 ```bash
-python -m pytest -v                          # подробный список тестов
-python -m pytest tests/test_citations.py     # один модуль
-python -m pytest -k "429 or timeout"         # по подстроке в имени теста
+python -m pytest -v                          # verbose list of tests
+python -m pytest tests/test_citations.py     # a single module
+python -m pytest -k "429 or timeout"         # by substring of the test name
 ```
 
-| Модуль | Что проверяет |
+| Module | What it covers |
 |---|---|
-| `test_doi.py` | Нормализация DOI: префиксы, URL, percent-encoding, скобки, мусор. |
-| `test_ingest.py` | Слияние Crossref + OpenAlex, ретракции, фолбэк при отказе источника, 404, таймауты, повторы. |
-| `test_citations.py` | Разбор и фильтрация контекстов, пагинация, лимит `offset + limit`, API-ключ, 429 / `Retry-After`. |
-| `test_cache.py` | Кэш: чтение/запись, TTL, отказоустойчивость, отсутствие повторных HTTP-запросов. |
-| `test_audit.py` | Конвейер `check` целиком и CLI: вывод, `--json`, коды возврата. |
+| `test_doi.py` | DOI normalization: prefixes, URLs, percent-encoding, parentheses, junk. |
+| `test_ingest.py` | Merging Crossref + OpenAlex, retractions, fallback when a source fails, 404, timeouts, retries. |
+| `test_citations.py` | Parsing and filtering contexts, pagination, the `offset + limit` limit, API key, 429 / `Retry-After`. |
+| `test_cache.py` | Cache reads/writes, TTL, fault tolerance, no repeated HTTP requests. |
+| `test_audit.py` | The whole `check` pipeline and the CLI: output, `--json`, exit codes. |
 
-В PyCharm: *Settings → Tools → Python Integrated Tools → Default test runner:
-pytest*, затем правый клик по папке `tests` → **Run 'pytest in tests'**.
+In PyCharm: *Settings → Tools → Python Integrated Tools → Default test runner:
+pytest*, then right-click the `tests` folder → **Run 'pytest in tests'**.
 
-## Дорожная карта
+## Roadmap
 
-- [x] Этап 1: нормализация DOI, Crossref + OpenAlex, ретракции, CLI `check`.
-- [x] Этап 2: контексты цитирования (Semantic Scholar), кэш ответов, документация.
-- [ ] Локальная база Retraction Watch и проверка ретракций у других работ авторов.
-- [ ] Обсуждения на PubPeer.
-- [ ] Вердикт-«светофор» `BLACK_CODE` / `RED` / `YELLOW` / `GREEN` с обоснованием.
-- [ ] Классификация тональности цитирований (поддерживающие / опровергающие).
-- [ ] `papaver verify "<утверждение>"`: проверка утверждения по систематическим обзорам.
-- [ ] Поиск по PMID и URL статьи.
+- [x] Stage 1: DOI normalization, Crossref + OpenAlex, retractions, `check` CLI.
+- [x] Stage 2: citation contexts (Semantic Scholar), response cache, documentation.
+- [ ] Local Retraction Watch database and retraction checks across the authors' other
+  papers.
+- [ ] PubPeer discussions.
+- [ ] Traffic-light verdict `BLACK_CODE` / `RED` / `YELLOW` / `GREEN` with reasons.
+- [ ] Classifying citation stance (supporting / contradicting).
+- [ ] `papaver verify "<claim>"`: checking a claim against systematic reviews.
+- [ ] Lookup by PMID and article URL.
