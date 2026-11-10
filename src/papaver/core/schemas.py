@@ -20,6 +20,7 @@ __all__ = [
     "AuthorInfo",
     "CitationContextItem",
     "CitationIntent",
+    "CitationScan",
     "CitingPaper",
     "DataSource",
     "PaperMetadata",
@@ -291,6 +292,24 @@ class CitationContextItem(_StrictModel):
     is_influential: bool = False
 
 
+class CitationScan(_StrictModel):
+    """Outcome of scanning the papers that cite the audited one."""
+
+    items: list[CitationContextItem] = Field(
+        default_factory=list,
+        description="Citing papers that have at least one usable citation context.",
+    )
+    scanned: int = Field(default=0, ge=0, description="Citing papers examined.")
+    truncated: bool = Field(
+        default=False,
+        description="More citing papers exist beyond the scan limit.",
+    )
+
+    @property
+    def influential(self) -> list[CitationContextItem]:
+        return [item for item in self.items if item.is_influential]
+
+
 class AuditReport(_StrictModel):
     """Final container handed to the verdict engine and the terminal renderer."""
 
@@ -301,7 +320,14 @@ class AuditReport(_StrictModel):
         description="Filled in by the verdict engine; None until scored.",
     )
     reasons: list[str] = Field(default_factory=list)
-    citations: list[CitationContextItem] = Field(default_factory=list)
+    citations: CitationScan | None = Field(
+        default=None,
+        description="Citation contexts from Semantic Scholar; None if not fetched or unavailable.",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Data-quality notes, e.g. a source that could not be reached.",
+    )
     generated_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.UTC))
 
     def with_verdict(self, verdict: VerdictLevel, reasons: list[str]) -> Self:

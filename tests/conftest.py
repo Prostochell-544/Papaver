@@ -1,6 +1,8 @@
 """Shared fixtures: settings isolated from `.env`, and trimmed real API payloads."""
 
+import zlib
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -13,13 +15,21 @@ RETRACTION_NOTICE_DOI = "10.1016/s0140-6736(10)60175-4"
 
 
 @pytest.fixture
-def settings() -> Settings:
-    # `_env_file=None` keeps a developer's local `.env` out of the tests.
+def settings(tmp_path: Path) -> Settings:
+    # `_env_file=None` keeps a developer's local `.env` out of the tests; values that a
+    # developer might export in the shell are pinned explicitly.
     return Settings(
         _env_file=None,  # type: ignore[call-arg]
         contact_email="tests@example.org",
+        s2_api_key=None,
+        db_url=f"sqlite+aiosqlite:///{(tmp_path / 'cache.db').as_posix()}",
+        cache_ttl_hours=24,
         max_retries=1,
         retry_backoff=0,
+        s2_max_citations=1000,
+        s2_max_retries=1,
+        s2_retry_backoff=0,
+        s2_min_interval=0,
     )
 
 
@@ -118,4 +128,53 @@ def openalex_wakefield() -> dict[str, Any]:
             },
         ],
         "cited_by_count": 3106,
+    }
+
+
+def s2_citation(
+    *,
+    title: str,
+    contexts: list[str],
+    intents: list[str] | None = None,
+    influential: bool = False,
+    year: int | None = 2023,
+    doi: str | None = None,
+) -> dict[str, Any]:
+    """One item of Semantic Scholar's ``/paper/{id}/citations`` ``data`` array."""
+    external_ids: dict[str, Any] = {"CorpusId": 1}
+    if doi is not None:
+        external_ids["DOI"] = doi
+    return {
+        "isInfluential": influential,
+        "intents": intents or [],
+        "contexts": contexts,
+        "citingPaper": {
+            "paperId": f"s2-{zlib.crc32(title.encode()):08x}",
+            "externalIds": external_ids,
+            "title": title,
+            "year": year,
+            "authors": [{"authorId": "1", "name": "A. Author"}, {"authorId": "2", "name": "B. Author"}],
+        },
+    }
+
+
+@pytest.fixture
+def s2_wakefield_page() -> dict[str, Any]:
+    """A last page (no ``next``) shaped like the live S2 response for the Wakefield paper."""
+    return {
+        "offset": 0,
+        "data": [
+            s2_citation(
+                title="Mitigating Vaccine Hesitancy and Building Trust to Prevent Future Measles "
+                "Outbreaks in England",
+                contexts=[
+                    "In 1998, Andrew Wakefield and colleagues published a now-infamous report, which "
+                    "suggested that MMR may predispose infants to gastrointestinal disease [34].",
+                ],
+                intents=["background"],
+                influential=True,
+                doi="10.3390/vaccines11020288",
+            ),
+            s2_citation(title="Paper without contexts (publisher licensing)", contexts=[]),
+        ],
     }

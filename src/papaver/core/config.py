@@ -51,8 +51,33 @@ class Settings(BaseSettings):
         description="Base delay for exponential backoff between retries, seconds.",
     )
 
+    cache_ttl_hours: float = Field(
+        default=24.0,
+        ge=0,
+        description="How long cached API responses stay fresh; 0 disables cache reads.",
+    )
+
     crossref_base_url: str = "https://api.crossref.org"
     openalex_base_url: str = "https://api.openalex.org"
+    s2_base_url: str = "https://api.semanticscholar.org/graph/v1"
+
+    s2_max_citations: int = Field(
+        default=1000,
+        ge=0,
+        le=9999,
+        description="Citing papers to scan per audit (S2 caps offset+limit below 10000).",
+    )
+    s2_min_interval: float = Field(
+        default=1.0,
+        ge=0,
+        description="Minimum seconds between Semantic Scholar requests (S2 allows ~1 req/s).",
+    )
+    s2_max_retries: int = Field(
+        default=4,
+        ge=0,
+        description="Retries for Semantic Scholar, whose shared pool often answers 429.",
+    )
+    s2_retry_backoff: float = Field(default=1.0, ge=0, description="Base backoff for S2, seconds.")
 
     @field_validator("contact_email", mode="before")
     @classmethod
@@ -72,7 +97,7 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator("crossref_base_url", "openalex_base_url")
+    @field_validator("crossref_base_url", "openalex_base_url", "s2_base_url")
     @classmethod
     def _strip_trailing_slash(cls, value: str) -> str:
         return value.rstrip("/")

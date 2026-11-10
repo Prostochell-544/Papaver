@@ -14,11 +14,11 @@ from rich.logging import RichHandler
 from rich.markup import escape
 
 from papaver import __version__
-from papaver.core.config import Settings, get_settings
+from papaver.core.config import get_settings
 from papaver.core.exceptions import PaperNotFoundError, PapaverError
-from papaver.core.schemas import PaperMetadata
-from papaver.services.ingest import IngestionService
+from papaver.services.audit import run_audit
 from papaver.utils.doi import InvalidDOIError, normalize_doi
+from papaver.utils.formatters import render_audit_report
 
 app = typer.Typer(
     name="papaver",
@@ -51,7 +51,7 @@ def main(
     ] = False,
     verbose: Annotated[
         bool,
-        typer.Option("--verbose", "-v", help="Log retries and HTTP requests."),
+        typer.Option("--verbose", "-v", help="Log retries, cache hits and HTTP requests."),
     ] = False,
 ) -> None:
     """Papaver: asynchronous integrity auditor for scientific publications."""
@@ -76,10 +76,33 @@ def check(
             show_default=False,
         ),
     ],
+    max_citations: Annotated[
+        int | None,
+        typer.Option(
+            "--max-citations",
+            min=0,
+            max=9999,
+            help="Citing papers to scan on Semantic Scholar; 0 skips citations. "
+            "Default: PAPAVER_S2_MAX_CITATIONS (1000).",
+            show_default=False,
+        ),
+    ] = None,
+    contexts: Annotated[
+        int,
+        typer.Option("--contexts", min=0, help="How many citation contexts to print."),
+    ] = 10,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Print the full report as JSON instead of the summary."),
+    ] = False,
+    no_cache: Annotated[
+        bool,
+        typer.Option("--no-cache", help="Ignore and do not update the local response cache."),
+    ] = False,
 ) -> None:
-    """Fetch a paper's metadata from Crossref and OpenAlex and print the merged record."""
+    """Audit a paper: Crossref/OpenAlex metadata, retraction notices and citation contexts."""
     try:
-        doi = normalize_doi(target)
+        normalize_doi(target)
     except InvalidDOIError as exc:
         _fail(f"{exc}. Only DOIs are supported for now (PMID/URL lookup comes later).", code=2)
 
@@ -89,19 +112,19 @@ def check(
         _fail(f"Invalid configuration (check PAPAVER_* variables / .env):\n{exc}", code=2)
 
     try:
-        with err_console.status(f"Querying Crossref and OpenAlex for [bold]{escape(doi)}[/]..."):
-            metadata = asyncio.run(_fetch_metadata(doi, settings))
+        with err_console.status("Querying Crossref, OpenAlex and Semantic Scholar..."):
+            report = asyncio.run(
+                run_audit(target, settings, max_citations=max_citations, use_cache=not no_cache)
+            )
     except PaperNotFoundError as exc:
         _fail(f"Not found: {exc}")
     except PapaverError as exc:
         _fail(str(exc))
 
-    rich.print(metadata)
-
-
-async def _fetch_metadata(doi: str, settings: Settings) -> PaperMetadata:
-    async with IngestionService(settings) as ingest:
-        return await ingest.get_paper_metadata(doi)
+    if as_json:
+        sys.stdout.write(report.model_dump_json(indent=2) + "\n")
+    else:
+        render_audit_report(report, rich.get_console(), max_contexts=contexts)
 
 
 def _ensure_utf8_streams() -> None:
